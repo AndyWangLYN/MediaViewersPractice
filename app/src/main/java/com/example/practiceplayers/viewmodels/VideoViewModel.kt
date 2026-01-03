@@ -72,8 +72,21 @@ class VideoViewModel(application: Application) : ViewModel() {
         exoPlayer?.playWhenReady = true
     }
 
-    fun stopPlayback() {
-        exoPlayer?.stop()
+    fun seekTo(timeInMs: Long) {
+        exoPlayer?.seekTo(timeInMs)
+    }
+
+    fun fastForward(timeInMs: Long) {
+        exoPlayer?.let { player ->
+            player.seekTo(player.currentPosition + timeInMs)
+        }
+    }
+
+    fun rewind(timeInMs: Long) {
+        exoPlayer?.let { player ->
+            val targetTimeInMs = (player.currentPosition - timeInMs).coerceAtLeast(0)
+            player.seekTo(targetTimeInMs)
+        }
     }
 
     fun onAttachSurface(surface: Surface) {
