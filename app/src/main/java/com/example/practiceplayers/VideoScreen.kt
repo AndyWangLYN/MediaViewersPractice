@@ -1,6 +1,5 @@
 package com.example.practiceplayers
 
-import android.app.Application
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.AndroidExternalSurface
 import androidx.compose.foundation.Image
@@ -25,29 +24,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.example.practiceplayers.viewmodels.VideoViewModel
 
 @Composable
-fun VideoScreen() {
-    val videoViewModel: VideoViewModel = viewModel(
-        factory = VideoViewModel.buildFactory(
-            LocalContext.current.applicationContext as Application
-        )
-    )
+fun VideoScreen(
+    navController: NavController
+) {
+    val videoViewModel = rememberVideoViewModel(navController)
     val isPlayerActive by videoViewModel.isPlayerActive.collectAsState()
 
     Surface(modifier = Modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .systemBarsPadding()
                 .aspectRatio(4f / 3f)
         ) {
             if (isPlayerActive) {
-                ExoPlayerView(videoViewModel)
+                ExoPlayerView(
+                    videoViewModel = videoViewModel,
+                    onExpandClicked = {
+                        navController.navigate(Screen.FullScreenVideo.route)
+                    }
+                )
             } else {
                 CoverImageView(videoViewModel)
             }
@@ -57,7 +59,8 @@ fun VideoScreen() {
 
 @Composable
 fun ExoPlayerView(
-    videoViewModel: VideoViewModel
+    videoViewModel: VideoViewModel,
+    onExpandClicked: () -> Unit
 ) {
     val shouldShowOverlay by videoViewModel.shouldShowPlaybackControls.collectAsState()
 
@@ -74,7 +77,7 @@ fun ExoPlayerView(
                 videoViewModel.onAttachSurface(surface)
                 // release surface on destroy
                 surface.onDestroyed {
-                    videoViewModel.onDetachSurface()
+                    videoViewModel.onDetachSurface(surface)
                 }
             }
         }
@@ -82,6 +85,9 @@ fun ExoPlayerView(
         if (shouldShowOverlay) {
             VideoOverlayControls(
                 videoViewModel = videoViewModel,
+                onExpandClicked = {
+                    onExpandClicked.invoke()
+                },
                 modifier = Modifier
                     .matchParentSize()
                     .clickable {
@@ -95,11 +101,13 @@ fun ExoPlayerView(
 @Composable
 fun VideoOverlayControls(
     videoViewModel: VideoViewModel,
+    onExpandClicked: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier) {
         PlaybackControls(
             videoViewModel = videoViewModel,
+            onExpandClicked = onExpandClicked,
             modifier = Modifier
         )
     }
@@ -108,6 +116,7 @@ fun VideoOverlayControls(
 @Composable
 fun PlaybackControls(
     videoViewModel: VideoViewModel,
+    onExpandClicked: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val playbackState by videoViewModel.playbackState.collectAsState()
@@ -125,7 +134,7 @@ fun PlaybackControls(
                 R.drawable.expand,
                 description = "Enter full screen"
             ) {
-                // TODO: launch to full screen onClick
+                onExpandClicked.invoke()
             }
         }
 

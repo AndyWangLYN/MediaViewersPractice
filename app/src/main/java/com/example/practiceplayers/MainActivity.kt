@@ -49,8 +49,13 @@ class MainActivity : ComponentActivity() {
                     }
                     // Video Screen
                     composable(route = Screen.Video.route) {
-                        VideoScreen()
+                        VideoScreen(navController)
                     }
+                    // video full screen
+                    composable(route = Screen.FullScreenVideo.route) {
+                        FullscreenVideoScreen(navController)
+                    }
+
                     // Images Screen
 //                    composable(route = Screen.Images.route) {
 //                        ImagesScreen()

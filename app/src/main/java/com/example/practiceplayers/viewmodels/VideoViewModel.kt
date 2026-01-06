@@ -1,6 +1,7 @@
 package com.example.practiceplayers.viewmodels
 
 import android.app.Application
+import android.os.Build
 import android.view.Surface
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -8,7 +9,6 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import com.example.practiceplayers.PlaybackControls
 import com.example.practiceplayers.PlaybackState
 import com.example.practiceplayers.VIDEO_URL_DEMO
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +26,8 @@ class VideoViewModel(application: Application) : ViewModel() {
 
     private val _playbackState = MutableStateFlow(PlaybackState.IDLE)
     val playbackState = _playbackState.asStateFlow()
+
+    private var currentSurface: Surface? = null
 
     private var exoPlayer: ExoPlayer? = null
     private val playerListener = object : Player.Listener {
@@ -97,12 +99,21 @@ class VideoViewModel(application: Application) : ViewModel() {
     }
 
     fun onAttachSurface(surface: Surface) {
+        if (currentSurface == surface) return
+        currentSurface = surface
         exoPlayer?.setVideoSurface(surface)
+        // build 23 and below forces video frame update to make sure smooth
+        if (Build.VERSION.SDK_INT < 23) {
+            val pos = exoPlayer?.currentPosition ?: 0L
+            exoPlayer?.seekTo(pos)
+        }
     }
 
-    fun onDetachSurface() {
-        exoPlayer?.setVideoSurface(null)
-        releaseExoPlayer()
+    fun onDetachSurface(surface: Surface) {
+        if (currentSurface == surface) {
+            exoPlayer?.setVideoSurface(null)
+            currentSurface = null
+        }
     }
 
     fun releaseExoPlayer() {
