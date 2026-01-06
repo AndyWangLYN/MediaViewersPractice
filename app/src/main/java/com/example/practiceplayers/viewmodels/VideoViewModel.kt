@@ -8,6 +8,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import com.example.practiceplayers.PlaybackControls
 import com.example.practiceplayers.PlaybackState
 import com.example.practiceplayers.VIDEO_URL_DEMO
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +21,9 @@ class VideoViewModel(application: Application) : ViewModel() {
     private val _isVideoPlaying = MutableStateFlow(false)
     val isVideoPlaying = _isVideoPlaying.asStateFlow()
 
+    private val _shouldShowPlaybackControls = MutableStateFlow(true)
+    val shouldShowPlaybackControls = _shouldShowPlaybackControls.asStateFlow()
+
     private val _playbackState = MutableStateFlow(PlaybackState.IDLE)
     val playbackState = _playbackState.asStateFlow()
 
@@ -29,7 +33,10 @@ class VideoViewModel(application: Application) : ViewModel() {
             super.onPlaybackStateChanged(playbackState)
             _playbackState.value = when (playbackState) {
                 Player.STATE_IDLE -> PlaybackState.IDLE
-                Player.STATE_BUFFERING -> PlaybackState.BUFFERING
+                Player.STATE_BUFFERING -> {
+                    _shouldShowPlaybackControls.value = true
+                    PlaybackState.BUFFERING
+                }
                 // do nothing we want play pause in onIsPlayingChanged callback
                 Player.STATE_READY -> _playbackState.value
                 Player.STATE_ENDED -> PlaybackState.COMPLETED
@@ -101,6 +108,15 @@ class VideoViewModel(application: Application) : ViewModel() {
     fun releaseExoPlayer() {
         exoPlayer?.release()
         exoPlayer = null
+    }
+
+    fun showPlaybackControls() {
+        _shouldShowPlaybackControls.value = true
+    }
+
+    fun hidePlaybackControls() {
+        if (playbackState.value == PlaybackState.BUFFERING) return
+        _shouldShowPlaybackControls.value = false
     }
 
     override fun onCleared() {

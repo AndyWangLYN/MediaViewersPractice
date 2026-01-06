@@ -59,10 +59,15 @@ fun VideoScreen() {
 fun ExoPlayerView(
     videoViewModel: VideoViewModel
 ) {
+    val shouldShowOverlay by videoViewModel.shouldShowPlaybackControls.collectAsState()
+
     Box {
         AndroidExternalSurface(
             modifier = Modifier
                 .aspectRatio(4f / 3f)
+                .clickable {
+                    videoViewModel.showPlaybackControls()
+                }
         ) {
             onSurface { surface, _, _ ->
                 // tell exoplayer the surface is ready, send this surface to it
@@ -74,10 +79,16 @@ fun ExoPlayerView(
             }
         }
 
-        VideoOverlayControls(
-            videoViewModel = videoViewModel,
-            modifier = Modifier.matchParentSize()
-        )
+        if (shouldShowOverlay) {
+            VideoOverlayControls(
+                videoViewModel = videoViewModel,
+                modifier = Modifier
+                    .matchParentSize()
+                    .clickable {
+                        videoViewModel.hidePlaybackControls()
+                    }
+            )
+        }
     }
 }
 
