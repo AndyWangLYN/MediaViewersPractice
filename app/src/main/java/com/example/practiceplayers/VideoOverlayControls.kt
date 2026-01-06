@@ -6,11 +6,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -19,6 +23,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.DefaultTimeBar
+import androidx.media3.ui.TimeBar
 import com.example.practiceplayers.viewmodels.VideoViewModel
 
 @Composable
@@ -77,6 +86,14 @@ fun PlaybackControls(
             // The fast forward button should show when playback is normal
             if (playbackState.isReady()) {
                 FastForwardButton(videoViewModel)
+            }
+        }
+
+        if (isFullScreen) {
+            Column(
+                modifier = Modifier.align(Alignment.BottomStart)
+            ) {
+                VideoProgressBar(videoViewModel)
             }
         }
     }
@@ -190,4 +207,75 @@ fun FastForwardButton(
     ) {
         videoViewModel.fastForward(10_000L)
     }
+}
+
+@Composable
+fun VideoProgressBar(videoViewModel: VideoViewModel) {
+    val currentPosition by videoViewModel.currentPositionMs.collectAsState()
+    val bufferedPositionInMs by videoViewModel.bufferedPositionMs.collectAsState()
+    val videoDuration by videoViewModel.videoDurationMs.collectAsState()
+
+    PlaybackPosition(
+        contentPositionInMs = currentPosition,
+        contentDurationInMs = videoDuration
+    )
+    TimeBar(
+        positionInMs = currentPosition,
+        durationInMs = videoDuration,
+        bufferedPositionInMs = bufferedPositionInMs
+    ) {
+        videoViewModel.seekTo(it.toLong())
+    }
+}
+
+@Composable
+fun PlaybackPosition(
+    contentPositionInMs: Long,
+    contentDurationInMs: Long
+) {
+    val positionString = Utils.formatMsToString(contentPositionInMs)
+    val durationString = Utils.formatMsToString(contentDurationInMs)
+    Text(
+        text = "$positionString / $durationString",
+        color = Color.White,
+        fontSize = 15.sp
+    )
+}
+
+@UnstableApi
+@Composable
+fun TimeBar(
+    positionInMs: Long,
+    durationInMs: Long,
+    bufferedPositionInMs: Long,
+    onSeek: (Float) -> Unit
+) {
+    AndroidView(
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight(),
+        factory = { context ->
+            DefaultTimeBar(context).apply {
+                setScrubberColor(0xFFFF0000.toInt())
+                setPlayedColor(0xCCFF0000.toInt())
+                setBufferedColor(0x77FF0000)
+            }
+        },
+        update = { timeBar ->
+            with(timeBar) {
+                addListener(object : TimeBar.OnScrubListener {
+                    override fun onScrubStart(timeBar: TimeBar, position: Long) {}
+
+                    override fun onScrubMove(timeBar: TimeBar, position: Long) {}
+
+                    override fun onScrubStop(timeBar: TimeBar, position: Long, canceled: Boolean) {
+                        onSeek(position.toFloat())
+                    }
+                })
+                setDuration(durationInMs)
+                setPosition(positionInMs)
+                setBufferedPosition(bufferedPositionInMs)
+            }
+        }
+    )
 }
