@@ -1,5 +1,8 @@
 package com.example.practiceplayers
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -49,8 +52,13 @@ class MainActivity : ComponentActivity() {
                     }
                     // Video Screen
                     composable(route = Screen.Video.route) {
-                        VideoScreen()
+                        VideoScreen(navController)
                     }
+                    // video full screen
+                    composable(route = Screen.FullScreenVideo.route) {
+                        FullscreenVideoScreen(navController)
+                    }
+
                     // Images Screen
 //                    composable(route = Screen.Images.route) {
 //                        ImagesScreen()
@@ -114,4 +122,13 @@ fun ProjectButton(
     Button(onClick = onClick, modifier = modifier) {
         Text(buttonText)
     }
+}
+
+fun Context.findActivity(): Activity? {
+    var context = this
+    while (context is ContextWrapper) {
+        if (context is Activity) return context
+        context = context.baseContext
+    }
+    return null
 }
