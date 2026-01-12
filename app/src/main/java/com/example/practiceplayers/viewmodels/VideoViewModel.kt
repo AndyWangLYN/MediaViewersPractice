@@ -8,10 +8,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.practiceplayers.PlaybackState
+import com.example.practiceplayers.SeekOverlay
 import com.example.practiceplayers.VIDEO_URL_DEMO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -23,9 +25,6 @@ import kotlinx.coroutines.launch
 class VideoViewModel(application: Application) : ViewModel() {
     private val _isPlayerActive = MutableStateFlow(false)
     val isPlayerActive = _isPlayerActive.asStateFlow()
-
-    private val _isVideoPlaying = MutableStateFlow(false)
-    val isVideoPlaying = _isVideoPlaying.asStateFlow()
 
     private val _shouldShowPlaybackControls = MutableStateFlow(true)
     val shouldShowPlaybackControls = _shouldShowPlaybackControls.asStateFlow()
@@ -41,6 +40,12 @@ class VideoViewModel(application: Application) : ViewModel() {
 
     private val _videoDurationMs = MutableStateFlow(0L)
     val videoDurationMs = _videoDurationMs.asStateFlow()
+
+    private val _videoPlaybackSpeed = MutableStateFlow(1f)
+    val videoPlaybackSpeed = _videoPlaybackSpeed.asStateFlow()
+
+    private val _seekOverlay = MutableStateFlow<SeekOverlay?>(null)
+    val seekOverlay = _seekOverlay.asStateFlow()
 
     private var positionTrackingJob: Job? = null
     private var currentSurface: Surface? = null
@@ -158,9 +163,20 @@ class VideoViewModel(application: Application) : ViewModel() {
         exoPlayer?.seekTo(timeInMs)
     }
 
+    fun setPlaybackSpeed(speed: Float) {
+        exoPlayer?.let {
+            // This single line adjusts the speed for BOTH audio and video
+            // while maintaining the original pitch.
+            it.playbackParameters = PlaybackParameters(speed)
+            _videoPlaybackSpeed.value = speed
+        }
+    }
+
     fun fastForward(timeInMs: Long) {
         exoPlayer?.let { player ->
             player.seekTo(player.currentPosition + timeInMs)
+
+            triggerAndResetSeekIndicator(SeekOverlay.Direction.FORWARD, timeInMs)
         }
     }
 
@@ -168,6 +184,16 @@ class VideoViewModel(application: Application) : ViewModel() {
         exoPlayer?.let { player ->
             val targetTimeInMs = (player.currentPosition - timeInMs).coerceAtLeast(0)
             player.seekTo(targetTimeInMs)
+
+            triggerAndResetSeekIndicator(SeekOverlay.Direction.BACKWARD, timeInMs)
+        }
+    }
+
+    private fun triggerAndResetSeekIndicator(direction: SeekOverlay.Direction, timeInMs: Long) {
+        _seekOverlay.value = SeekOverlay(direction, timeInMs)
+        viewModelScope.launch {
+            delay(500L)
+            _seekOverlay.value = null
         }
     }
 
@@ -192,6 +218,14 @@ class VideoViewModel(application: Application) : ViewModel() {
     fun releaseExoPlayer() {
         exoPlayer?.release()
         exoPlayer = null
+    }
+
+    fun togglePlaybackControls() {
+        if (_shouldShowPlaybackControls.value) {
+            hidePlaybackControls()
+        } else {
+            showPlaybackControls()
+        }
     }
 
     fun showPlaybackControls() {
