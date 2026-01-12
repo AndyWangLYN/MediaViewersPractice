@@ -46,6 +46,10 @@ class VideoViewModel(application: Application) : ViewModel() {
     private var currentSurface: Surface? = null
     private var exoPlayer: ExoPlayer? = null
 
+    // use this flag to indicate if video is prewarmed.
+    private val isVideoPrepared: Boolean
+        get() = exoPlayer?.playbackState != Player.STATE_IDLE
+
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
             super.onPlaybackStateChanged(playbackState)
@@ -106,6 +110,7 @@ class VideoViewModel(application: Application) : ViewModel() {
                 exoPlayer?.let { player ->
                     if (player.isPlaying) {
                         _currentPositionMs.value = player.currentPosition
+                        _bufferedPositionMs.value = player.bufferedPosition
                     }
                 }
                 delay(1_000L)
@@ -122,12 +127,21 @@ class VideoViewModel(application: Application) : ViewModel() {
         _videoDurationMs.value = exoPlayer?.duration ?: 0L
     }
 
-    fun startPlayback() {
+    fun prewarmVideo(url: String = VIDEO_URL_DEMO) {
+        if (isVideoPrepared) return
         exoPlayer?.let { player ->
-            val mediaItem = MediaItem.Builder().setUri(VIDEO_URL_DEMO).build()
+            val mediaItem = MediaItem.Builder().setUri(url).build()
             player.setMediaItem(mediaItem)
             player.prepare()
-            player.play()
+        }
+    }
+
+    fun startPlayback() {
+        exoPlayer?.let { player ->
+            if (!isVideoPrepared) {
+                prewarmVideo()
+            }
+            player.playWhenReady = true
             _isPlayerActive.value = true
         }
     }

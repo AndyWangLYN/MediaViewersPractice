@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -29,6 +30,10 @@ fun VideoScreen(
 ) {
     val videoViewModel = rememberVideoViewModel(navController)
     val isPlayerActive by videoViewModel.isPlayerActive.collectAsState()
+
+    LaunchedEffect(Unit) {
+        videoViewModel.prewarmVideo()
+    }
 
     Surface(modifier = Modifier.fillMaxWidth()) {
         Box(
